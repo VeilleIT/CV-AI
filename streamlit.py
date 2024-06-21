@@ -2,6 +2,7 @@ import time
 import os
 import numpy as np
 import pandas as pd
+from io import BytesIO
 import streamlit as st
 from streamlit_option_menu import option_menu
 from streamlit_extras.add_vertical_space import add_vertical_space
@@ -49,25 +50,6 @@ st.markdown(
 )
 image_url = "Assets/BCP.jpg"
 st.image(image_url, use_column_width=True)
-uploaded_files = st.file_uploader("Ajouter CV pour analyse", accept_multiple_files=True)
-
-if uploaded_files:
-    for uploaded_file in uploaded_files:
-
-        # Read the file
-        bytes_data = uploaded_file.read()
-
-        # Save file to local directory
-        file_path = os.path.join(resume_dir, uploaded_file.name)
-        with open(file_path, "wb") as f:
-            f.write(bytes_data)
-
-
-# Définir le titre de l'application
-st.title("Offre d'emploi")
-
-# Afficher une zone de texte pour entrer du texte
-texte = st.text_area("Description de l'offre d'emploi")
 
 
 class resume_analyzer:
@@ -130,19 +112,51 @@ class resume_analyzer:
 
             # User Upload the Resume
             add_vertical_space(1)
-            pdf = st.file_uploader(label="Upload Your Resume", type="pdf")
+            uploaded_files = st.file_uploader(
+                "Ajouter les CVs pour analyse", accept_multiple_files=True
+            )
+
+            if uploaded_files:
+                file_names = []
+                for uploaded_file in uploaded_files:
+                    # Save file to local directory
+                    file_path = os.path.join(resume_dir, uploaded_file.name)
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    file_names.append(uploaded_file.name)
+
             add_vertical_space(1)
 
+            # Select a PDF file from the uploaded files
+        if file_names:
+            selected_file = st.selectbox(
+                "Sélectionner un CV pour le résumé", file_names
+            )
+            pdf_path = os.path.join(resume_dir, selected_file)
+            with open(pdf_path, "rb") as f:
+                pdf = BytesIO(f.read())
+        else:
+            pdf = None
+
             # Enter OpenAI API Key
-            col1, col2 = st.columns([0.6, 0.4])
+            col1, col2 = st.columns([0.5, 0.5])
             with col1:
                 openai_api_key = st.text_input(
-                    label="Enter OpenAI API Key", type="password"
+                    label="Entrer Clé AzureOpenAI", type="password"
                 )
+            # Ajouter un espace vertical
             add_vertical_space(2)
 
+            # Ajouter un champ de saisie pour l'Endpoint Azure dans la deuxième colonne
+            with col2:
+                azure_endpoint = st.text_input(label="Entrer Endpoint Azure")
+
+            # Afficher une zone de texte pour entrer du texte
+            texte = st.text_area("Description de l'offre d'emploi")
+            add_vertical_space(1)
+
             # Click on Submit Button
-            submit = st.form_submit_button(label="Submit")
+            submit = st.form_submit_button(label="Generer Résumé")
             add_vertical_space(1)
 
         add_vertical_space(3)
@@ -752,7 +766,7 @@ with st.sidebar:
     )
 
 
-if option == "Summary":
+if option == "OpenAI Résumé":
 
     resume_analyzer.resume_summary()
 
