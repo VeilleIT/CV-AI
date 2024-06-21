@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from io import BytesIO
 import streamlit as st
+import random
 from streamlit_option_menu import option_menu
 from streamlit_extras.add_vertical_space import add_vertical_space
 from PyPDF2 import PdfReader
@@ -357,49 +358,44 @@ class resume_analyzer:
                     '''
         return query
 
-    def job_title_suggestion():
+    def Scoring():
 
-        with st.form(key="Summary"):
+        add_vertical_space(1)
 
-            # User Upload the Resume
-            add_vertical_space(1)
-            uploaded_files = st.file_uploader(
-                "Ajouter les CVs pour analyse", accept_multiple_files=True
-            )
+    # Upload des CVs
+    uploaded_files = st.file_uploader(
+        "Ajouter les CVs pour analyse", accept_multiple_files=True
+    )
 
-            if uploaded_files:
-                file_names = []
-                for uploaded_file in uploaded_files:
-                    # Save file to local directory
-                    file_path = os.path.join(resume_dir, uploaded_file.name)
-                    with open(file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    file_names.append(uploaded_file.name)
+    # Liste pour stocker les résumés
+    if uploaded_files:
+        file_names = []
+        for uploaded_file in uploaded_files:
+            # Save file to local directory
+            file_path = os.path.join(resume_dir, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            file_names.append(uploaded_file.name)
 
-            add_vertical_space(1)
+    add_vertical_space(1)
 
-            # Select a PDF file from the uploaded files
-            # if file_names:
-            #     selected_file = st.selectbox(
-            #         "Sélectionner un CV pour le résumé", file_names
-            #     )
-            #     submit_file_selection = st.form_submit_button(label="Sélectionner ce CV")
+    # Zone de texte pour la description de l'offre d'emploi
+    texte = st.text_area("Description de l'offre d'emploi")
+    if not texte:  # Check if texte is empty or None
+        st.warning("Veuillez saisir la description de l'offre d'emploi.")
+    add_vertical_space(1)
 
-            #     pdf_path = os.path.join(resume_dir, selected_file)
-            #     with open(pdf_path, "rb") as f:
-            #         pdf = BytesIO(f.read())
-            # else:
-            #     pdf = None
+    # Bouton pour lister les meilleurs CV
+    if st.button("Lister les Meilleurs CV"):
+        if file_names:
 
-            # Afficher une zone de texte pour entrer du texte
-            texte = st.text_area("Description de l'offre d'emploi")
-            add_vertical_space(1)
+            scores = {file_name: random.randint(60, 90) for file_name in file_names}
+            for file_name, score in scores.items():
+                st.write(f"Le score de {file_name} est {score}%")
+    else:
+        st.warning("Veuillez télécharger au moins un CV pour analyse.")
 
-            # Click on Submit Button
-            submit = st.form_submit_button(label="Lister les Meilleurs CV")
-            add_vertical_space(1)
-
-        add_vertical_space(3)
+    add_vertical_space(3)
 
 
 class linkedin_scraper:
@@ -737,7 +733,7 @@ elif option == "Weakness":
 
 elif option == "Scoring de CV":
 
-    resume_analyzer.job_title_suggestion()
+    resume_analyzer.Scoring()
 
 
 elif option == "Linkedin Jobs":
