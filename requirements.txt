@@ -5,3 +5,5 @@ PyPDF2
 selenium
 openai
 langchain
+langchain-community
+fastembed

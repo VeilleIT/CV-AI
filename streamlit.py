@@ -16,6 +16,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -71,10 +73,10 @@ class resume_analyzer:
         chunks = text_splitter.split_text(text=text)
         return chunks
 
-    def openai(openai_api_key, chunks, analyze):
+    def openai(chunks, analyze):
 
         # Using OpenAI service for embedding
-        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
         # Facebook AI Similarity Serach library help us to convert text data to numerical vector
         vectorstores = FAISS.from_texts(chunks, embedding=embeddings)
@@ -128,40 +130,28 @@ class resume_analyzer:
             add_vertical_space(1)
 
             # Select a PDF file from the uploaded files
-        if file_names:
-            selected_file = st.selectbox(
-                "Sélectionner un CV pour le résumé", file_names
-            )
-            pdf_path = os.path.join(resume_dir, selected_file)
-            with open(pdf_path, "rb") as f:
-                pdf = BytesIO(f.read())
-        else:
-            pdf = None
+            # if file_names:
+            #     selected_file = st.selectbox(
+            #         "Sélectionner un CV pour le résumé", file_names
+            #     )
+            #     submit_file_selection = st.form_submit_button(label="Sélectionner ce CV")
 
-            # Enter OpenAI API Key
-            col1, col2 = st.columns([0.5, 0.5])
-            with col1:
-                openai_api_key = st.text_input(
-                    label="Entrer Clé AzureOpenAI", type="password"
-                )
-            # Ajouter un espace vertical
-            add_vertical_space(2)
-
-            # Ajouter un champ de saisie pour l'Endpoint Azure dans la deuxième colonne
-            with col2:
-                azure_endpoint = st.text_input(label="Entrer Endpoint Azure")
+            #     pdf_path = os.path.join(resume_dir, selected_file)
+            #     with open(pdf_path, "rb") as f:
+            #         pdf = BytesIO(f.read())
+            # else:
+            #     pdf = None
 
             # Afficher une zone de texte pour entrer du texte
-            texte = st.text_area("Description de l'offre d'emploi")
-            add_vertical_space(1)
 
             # Click on Submit Button
             submit = st.form_submit_button(label="Generer Résumé")
             add_vertical_space(1)
 
         add_vertical_space(3)
+
         if submit:
-            if pdf is not None and openai_api_key != "":
+            if pdf is not None:
                 try:
                     with st.spinner("Processing..."):
 
@@ -172,7 +162,6 @@ class resume_analyzer:
                         )
 
                         summary = resume_analyzer.openai(
-                            openai_api_key=openai_api_key,
                             chunks=pdf_chunks,
                             analyze=summary_prompt,
                         )
@@ -192,12 +181,6 @@ class resume_analyzer:
             elif pdf is None:
                 st.markdown(
                     f'<h5 style="text-align: center;color: orange;">Please Upload Your Resume</h5>',
-                    unsafe_allow_html=True,
-                )
-
-            elif openai_api_key == "":
-                st.markdown(
-                    f'<h5 style="text-align: center;color: orange;">Please Enter OpenAI API Key</h5>',
                     unsafe_allow_html=True,
                 )
 
@@ -376,76 +359,47 @@ class resume_analyzer:
 
     def job_title_suggestion():
 
-        with st.form(key="Job Titles"):
+        with st.form(key="Summary"):
 
             # User Upload the Resume
             add_vertical_space(1)
-            pdf = st.file_uploader(label="Upload Your Resume", type="pdf")
+            uploaded_files = st.file_uploader(
+                "Ajouter les CVs pour analyse", accept_multiple_files=True
+            )
+
+            if uploaded_files:
+                file_names = []
+                for uploaded_file in uploaded_files:
+                    # Save file to local directory
+                    file_path = os.path.join(resume_dir, uploaded_file.name)
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    file_names.append(uploaded_file.name)
+
             add_vertical_space(1)
 
-            # Enter OpenAI API Key
-            col1, col2 = st.columns([0.6, 0.4])
-            with col1:
-                openai_api_key = st.text_input(
-                    label="Enter OpenAI API Key", type="password"
-                )
-            add_vertical_space(2)
+            # Select a PDF file from the uploaded files
+            # if file_names:
+            #     selected_file = st.selectbox(
+            #         "Sélectionner un CV pour le résumé", file_names
+            #     )
+            #     submit_file_selection = st.form_submit_button(label="Sélectionner ce CV")
+
+            #     pdf_path = os.path.join(resume_dir, selected_file)
+            #     with open(pdf_path, "rb") as f:
+            #         pdf = BytesIO(f.read())
+            # else:
+            #     pdf = None
+
+            # Afficher une zone de texte pour entrer du texte
+            texte = st.text_area("Description de l'offre d'emploi")
+            add_vertical_space(1)
 
             # Click on Submit Button
-            submit = st.form_submit_button(label="Submit")
+            submit = st.form_submit_button(label="Lister les Meilleurs CV")
             add_vertical_space(1)
 
         add_vertical_space(3)
-        if submit:
-            if pdf is not None and openai_api_key != "":
-                try:
-                    with st.spinner("Processing..."):
-
-                        pdf_chunks = resume_analyzer.pdf_to_chunks(pdf)
-
-                        summary_prompt = resume_analyzer.summary_prompt(
-                            query_with_chunks=pdf_chunks
-                        )
-
-                        summary = resume_analyzer.openai(
-                            openai_api_key=openai_api_key,
-                            chunks=pdf_chunks,
-                            analyze=summary_prompt,
-                        )
-
-                        job_title_prompt = resume_analyzer.job_title_prompt(
-                            query_with_chunks=summary
-                        )
-
-                        job_title = resume_analyzer.openai(
-                            openai_api_key=openai_api_key,
-                            chunks=pdf_chunks,
-                            analyze=job_title_prompt,
-                        )
-
-                    st.markdown(
-                        f'<h4 style="color: orange;">Job Titles:</h4>',
-                        unsafe_allow_html=True,
-                    )
-                    st.write(job_title)
-
-                except Exception as e:
-                    st.markdown(
-                        f'<h5 style="text-align: center;color: orange;">{e}</h5>',
-                        unsafe_allow_html=True,
-                    )
-
-            elif pdf is None:
-                st.markdown(
-                    f'<h5 style="text-align: center;color: orange;">Please Upload Your Resume</h5>',
-                    unsafe_allow_html=True,
-                )
-
-            elif openai_api_key == "":
-                st.markdown(
-                    f'<h5 style="text-align: center;color: orange;">Please Enter OpenAI API Key</h5>',
-                    unsafe_allow_html=True,
-                )
 
 
 class linkedin_scraper:
@@ -759,7 +713,7 @@ with st.sidebar:
             "OpenAI Résumé",
             "Points Forts du CV",
             "Point Faibles du CV",
-            "Job Titles",
+            "Scoring de CV",
             "Offres Linkedin",
         ],
         icons=["house-fill", "database-fill", "pass-fill", "list-ul", "linkedin"],
@@ -781,7 +735,7 @@ elif option == "Weakness":
     resume_analyzer.resume_weakness()
 
 
-elif option == "Job Titles":
+elif option == "Scoring de CV":
 
     resume_analyzer.job_title_suggestion()
 
